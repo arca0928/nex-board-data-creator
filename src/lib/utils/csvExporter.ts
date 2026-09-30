@@ -1,8 +1,11 @@
 import Papa from 'papaparse';
 import type { Row } from '$lib/types/csv';
+import { validateRows } from './csvValidation';
 
 export function generateCSVFiles(rows: Row[]) {
+	validateRows(rows);
 	const csvRows = rows.map((row) => ({
+		nexState: row.nexState,
 		start: row.start,
 		lyric: row.lyric,
 		duration: row.duration,
@@ -35,8 +38,12 @@ export function downloadFile(content: string, filename: string) {
 	link.style.visibility = 'hidden';
 
 	document.body.appendChild(link);
-	link.click();
-	document.body.removeChild(link);
+	try {
+		link.click();
+	} finally {
+		link.remove();
+		setTimeout(() => URL.revokeObjectURL(url), 1000);
+	}
 }
 
 export function downloadAllFiles(rows: Row[], groupName: string, songName: string) {

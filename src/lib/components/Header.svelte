@@ -3,10 +3,31 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
 	import { fileState } from '$lib/states/fileState.svelte';
+	import { toastState } from '$lib/states/toastState.svelte';
 	import { CSVError } from '$lib/utils/csvImporter';
+	import { onMount } from 'svelte';
 
-	let showWarning = $state(true);
+	const HIDE_WARNING_KEY = 'nexboard-creator:hide-warning';
+
+	let showWarning = $state(false);
 	let showHint = $state(false);
+	let hideWarningNextTime = $state(false);
+	let fileInput: HTMLInputElement;
+
+	onMount(() => {
+		hideWarningNextTime = localStorage.getItem(HIDE_WARNING_KEY) === '1';
+		showWarning = !hideWarningNextTime;
+	});
+
+	function closeWarning() {
+		showWarning = false;
+		if (hideWarningNextTime) {
+			localStorage.setItem(HIDE_WARNING_KEY, '1');
+		} else {
+			localStorage.removeItem(HIDE_WARNING_KEY);
+		}
+	}
+
 	async function handleImport(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const file = target.files?.[0];
@@ -14,30 +35,29 @@
 
 		try {
 			await fileState.importCSV(file);
+			toastState.show(`${file.name} を読み込みました`);
 		} catch (error) {
 			if (error instanceof CSVError) {
 				switch (error.type) {
 					case 'CSV_IMPORT_ERROR':
 						// CSVインポートエラー
-						alert('csvファイルのインポートに失敗しました');
+						toastState.error('CSVファイルの読み込みに失敗しました');
 						break;
 					case 'CSV_IMPORT_CANCELED':
-						alert('csvファイルのインポートがキャンセルされました');
+						toastState.show('CSVファイルの読み込みをキャンセルしました');
 						break;
 					case 'CSV_FORMAT_ERROR':
-						alert(
-							'アップロードされたcsvファイルのフォーマットが異なるためインポートがキャンセルされました'
-						);
+						toastState.error('CSVファイルのフォーマットが異なるため、読み込みをキャンセルしました');
 						break;
 					case 'CSV_DATA_ERROR':
-						alert('アップロードされたcsvファイルが破損していたためインポートに失敗しました');
+						toastState.error(error.message);
 						break;
 					default:
-						alert('不明なエラー');
+						toastState.error('不明なエラーが発生しました');
 						break;
 				}
 			} else {
-				alert('不明なエラー');
+				toastState.error('不明なエラーが発生しました');
 				console.error(error);
 			}
 		}
@@ -45,17 +65,26 @@
 	}
 </script>
 
-<header class="flex bg-blue-400 px-6 py-2">
-	<h2 class="text-3xl font-bold">DataCreator for Nex-Board</h2>
-	<input type="file" accept=".csv" onchange={handleImport} id="import-csv" hidden />
-	<button
-		onclick={() => document.getElementById('import-csv')?.click()}
-		class="ml-auto h-fit cursor-pointer rounded-lg bg-blue-300 px-2 py-1 text-lg"
-	>
-		Import CSV
+<header class="flex items-center gap-3 bg-brand px-6 py-2">
+	<h1 class="text-3xl font-bold">DataCreator for Nex-Board</h1>
+	<input
+		bind:this={fileInput}
+		type="file"
+		accept=".csv"
+		onchange={handleImport}
+		id="import-csv"
+		hidden
+	/>
+	<button onclick={() => fileInput.click()} class="ml-auto btn btn-secondary text-lg">
+		CSVを読み込む
+	</button>
+	<button onclick={() => fileState.exportCSV()} class="btn btn-primary text-lg">
+		CSVをダウンロード
 	</button>
 	<button
-		class="ml-7 h-9 w-9 cursor-pointer rounded-full border-2 bg-white text-2xl transition-colors hover:bg-green-300"
+		class="ml-6 btn h-9 w-9 rounded-full btn-secondary p-0 text-2xl"
+		aria-label="使い方を表示"
+		title="使い方を表示"
 		onclick={() => {
 			showHint = true;
 		}}
@@ -63,34 +92,31 @@
 		?
 	</button>
 	<button
-		class="ml-4 h-9 w-9 cursor-pointer rounded-full border-2 bg-white text-2xl transition-colors hover:bg-yellow-300"
+		class="btn h-9 w-9 rounded-full btn-secondary p-0 text-2xl"
+		aria-label="注意事項を表示"
+		title="注意事項を表示"
 		onclick={() => {
 			showWarning = true;
 		}}
 	>
 		<span class="font-mono">&#9888;</span>
 	</button>
-	<button
-		onclick={() => fileState.exportCSV()}
-		class="ml-8 h-fit cursor-pointer rounded-lg bg-green-400 px-2 py-1 text-lg"
-	>
-		Download CSV files
-	</button>
 </header>
 <Modal
+	label="使い方"
 	show={showHint}
 	onClose={() => {
 		showHint = false;
 	}}
 >
-	<h2 class="mb-1 text-3xl">How to use</h2>
+	<h2 class="mb-1 text-3xl">使い方</h2>
 	<h3 class="mb-1 text-xl font-bold text-red-600">このアプリは全画面で使用してください</h3>
 	<div class="flex">
 		<div>
 			<ul class="list-decimal px-5 py-2">
-				<li class="py-1">編集途中のcsvファイルをインポートするボタン</li>
-				<li class="py-1">左:使い方を表示するボタン 右:注意事項を表示するボタン</li>
+				<li class="py-1">編集途中のcsvファイルを読み込むボタン</li>
 				<li class="py-1">csvファイルをダウンロードするボタン</li>
+				<li class="py-1">左:使い方を表示するボタン 右:注意事項を表示するボタン</li>
 				<li class="py-1">
 					YouTubeまたはファイルの再生時間を表示するエリア<br
 					/>左にcsvに入力するための再生開始からの秒数、右に現在時間/合計時間を分:秒形式で表示
@@ -150,29 +176,30 @@
 		<li>左右のサイド照明は白点灯か消灯となっています。色指定は出来ませんのでご了承ください。</li>
 		<li>
 			バックの照明について:
-			チェックボックスからチェックを外すと、最近設定された色のまま点灯し続けます。消灯したい場合はチェックボックスにチェックを入れ、黒(RGBで0,0,0)を指定してください。
+			チェックボックスからチェックを外すと、最後に設定された色のまま点灯し続けます。消灯したい場合はチェックボックスにチェックを入れ、黒(RGBで0,0,0)を指定してください。
 		</li>
 	</ul>
 </Modal>
 
-<Modal
-	show={showWarning}
-	onClose={() => {
-		showWarning = false;
-	}}
->
+<Modal label="データ作成にあたっての注意" show={showWarning} onClose={closeWarning}>
+	{#snippet footer()}
+		<label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+			<input type="checkbox" bind:checked={hideWarningNextTime} class="focus-ring" />
+			次回から起動時に表示しない
+		</label>
+	{/snippet}
 	<h2 class="mb-3 text-3xl">データ作成にあたっての注意</h2>
 	<ul class="list-disc px-5 py-2">
 		<li class="py-1">
 			このページを閉じたり再読み込みすると、ダウンロードされていない編集中のデータが消失します。こまめに
-			<span class="rounded-lg bg-green-400 p-2">Download CSV files</span>
+			<span class="rounded-lg bg-primary px-2 py-1 text-white">CSVをダウンロード</span>
 			ボタンからファイルをダウンロードするようにしてください。
 		</li>
 		<li class="py-1">
 			このアプリは全画面表示を前提に作成されています。全画面表示でご利用ください。
 		</li>
 		<li class="py-1">
-			グループ名、曲名には半角英数字と半角丸括弧、半角ハイフン、半角アンダーバー、半角ピリオドのみ使用可能です。英語ではないグループ名や曲名についてはローマ字に直してください。またグループ名や曲名に使用できない記号が含まれる場合は省略してください。
+			グループ名、曲名には半角英数字と半角丸括弧、半角ハイフン、半角アンダーバー、半角ピリオドのみ使用可能です。アンダーバーを2つ連続させること、曲名の先頭にアンダーバーを使うことはできません。英語ではないグループ名や曲名についてはローマ字に直してください。またグループ名や曲名に使用できない記号が含まれる場合は省略してください。
 		</li>
 		<li class="py-1">
 			電光掲示板に表示するテキストには、
@@ -186,9 +213,11 @@
 		</li>
 		<li class="py-1">
 			使い方は
-			<span class=" mx-1 h-9 w-9 rounded-full border-2 bg-white px-2.5 text-2xl"> ? </span>
+			<span class="mx-1 rounded-full border border-gray-300 bg-white px-2.5 text-2xl">?</span>
 			ボタンから、この注意事項は
-			<span class=" mx-1 h-9 w-9 rounded-full border-2 bg-white px-1.5 py-0.5 font-mono text-2xl">
+			<span
+				class="mx-1 rounded-full border border-gray-300 bg-white px-1.5 py-0.5 font-mono text-2xl"
+			>
 				&#9888;
 			</span>
 			ボタンから確認できます。 使用前にご一読ください。

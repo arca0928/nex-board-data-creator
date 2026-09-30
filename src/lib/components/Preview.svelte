@@ -1,8 +1,31 @@
 <script lang="ts">
 	import { editorState } from '$lib/states/editorState.svelte';
 	import { usePreviewClock } from '$lib/utils/timing.svelte';
+	import { toastState } from '$lib/states/toastState.svelte';
+	import { onMount } from 'svelte';
 
 	const clock = usePreviewClock();
+
+	// --- 0. 実機と同じ IPAゴシックを強制的に使用する ---
+	// 読み込み完了までは代替フォントで描画しないようテキストを隠す
+	const PREVIEW_FONT = 'IPAGothic';
+	let fontReady = $state(false);
+
+	onMount(() => {
+		document.fonts
+			.load(`1em ${PREVIEW_FONT}`)
+			.then((faces) => {
+				if (faces.length === 0) throw new Error(`${PREVIEW_FONT} を読み込めませんでした`);
+				fontReady = true;
+			})
+			.catch((error) => {
+				console.error(error);
+				fontReady = true;
+				toastState.error(
+					'IPAゴシックを読み込めなかったため、代替フォントで表示しています。実機と表示が異なる可能性があります。'
+				);
+			});
+	});
 
 	// --- 1. 仮想解像度と巨大フォントサイズの定義 ---
 	const SUB_VIRTUAL_WIDTH = 1920 * 2; // 3840px (左側)
@@ -38,14 +61,14 @@
 	// --- 3. monitorごとにタイムラインを完全分離 ---
 	let subItems = $derived.by(() => {
 		return editorState.rows
-			.filter((row) => row.monitor?.trim() === 'sub')
+			.filter((row) => row.nexState && row.monitor?.trim() === 'sub')
 			.map(parseRow)
 			.sort((a, b) => a.start - b.start);
 	});
 
 	let mainItems = $derived.by(() => {
 		return editorState.rows
-			.filter((row) => row.monitor?.trim() === 'main')
+			.filter((row) => row.nexState && row.monitor?.trim() === 'main')
 			.map(parseRow)
 			.sort((a, b) => a.start - b.start);
 	});
@@ -54,12 +77,17 @@
 	function getCurrentItem(items: ReturnType<typeof parseRow>[], currentTime: number) {
 		if (items.length === 0) return null;
 
-		const activeItems = items.filter((i) => i.start <= currentTime);
-		if (activeItems.length === 0) return null;
+		let low = 0;
+		let high = items.length;
+		while (low < high) {
+			const middle = Math.floor((low + high) / 2);
+			if (items[middle].start <= currentTime) low = middle + 1;
+			else high = middle;
+		}
+		if (low === 0) return null;
+		const latest = items[low - 1];
 
-		const latest = activeItems[activeItems.length - 1];
-
-		if (latest.type === 'slide') {
+		if (latest.type === 'slide' && !latest.isLoop) {
 			if (currentTime - latest.start > latest.duration) {
 				return null;
 			}
@@ -125,7 +153,9 @@
 	let mainX = $derived(calcCurrentX(currentMainItem, clock.time, MAIN_VIRTUAL_WIDTH));
 </script>
 
-<div class="font-ipa"></div>
+<svelte:head>
+	<link rel="preload" href="/fonts/ipag.ttf" as="font" type="font/ttf" crossorigin="anonymous" />
+</svelte:head>
 
 <div class="multi-monitor-previewer" bind:clientWidth={containerWidth}>
 	<div class="monitor-labels-header">
@@ -149,7 +179,7 @@
 				<div
 					class="ticker-text font-bold"
 					style:color={currentSubItem?.color}
-					style:visibility={currentSubItem ? 'visible' : 'hidden'}
+					style:visibility={currentSubItem && fontReady ? 'visible' : 'hidden'}
 					style:transform="translate(calc(-50% + {subX}px), -50%)"
 					style:font-size="{VIRTUAL_TEXT_SIZE}px"
 				>
@@ -172,7 +202,7 @@
 				<div
 					class="ticker-text font-bold"
 					style:color={currentMainItem?.color}
-					style:visibility={currentMainItem ? 'visible' : 'hidden'}
+					style:visibility={currentMainItem && fontReady ? 'visible' : 'hidden'}
 					style:transform="translate(calc(-50% + {mainX}px), -50%)"
 					style:font-size="{VIRTUAL_TEXT_SIZE}px"
 				>
@@ -187,6 +217,8 @@
 	@font-face {
 		font-family: 'IPAGothic';
 		src: url('/fonts/ipag.ttf') format('truetype');
+		/* 読み込み完了まで代替フォントを使わない */
+		font-display: block;
 	}
 	.multi-monitor-previewer {
 		display: flex;

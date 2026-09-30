@@ -1,33 +1,23 @@
 <script lang="ts">
 	import { editorState } from '$lib/states/editorState.svelte';
+	import { usePreviewClock } from '$lib/utils/timing.svelte';
 
 	const playerState = editorState.playerState;
+	const clock = usePreviewClock();
 
-	function formatTime(seconds: number): string {
-		const totalSeconds = Math.floor(seconds);
+	function formatClock(seconds: number): string {
 		const mins = Math.floor(seconds / 60);
 		const secs = Math.floor(seconds % 60);
-		return `${totalSeconds}秒 | ${mins}:${secs.toString().padStart(2, '0')}`;
+		return `${mins}:${secs.toString().padStart(2, '0')}`;
 	}
 </script>
 
-<div class="my-2 mr-15 ml-auto flex rounded-xl bg-gray-200 px-5 py-2 font-mono text-xl">
-	<div class="my-auto mr-5 text-base text-gray-600">再生時間</div>
-	<div class="flex flex-col">
-		<div class="text-xl">
-			{formatTime(playerState.currentTime)}/{Math.floor(playerState.duration / 60)}:{Math.floor(
-				playerState.duration % 60
-			)
-				.toString()
-				.padStart(2, '0')}
-		</div>
-		<div class=" w-42 rounded bg-gray-300">
-			<div
-				class="h-2 rounded bg-blue-500 transition-all"
-				style:width={playerState.duration > 0
-					? `${(playerState.currentTime / playerState.duration) * 100}%`
-					: '0%'}
-			></div>
-		</div>
+<div class="ml-auto flex items-center rounded-xl bg-gray-200 px-5 py-2 font-mono">
+	<div class="mr-5 text-base text-gray-600">再生時間</div>
+	<div class="text-xl">
+		<!-- csvの開始時間に入力する値 (小数第1位まで) -->
+		<span class="font-bold">{clock.time.toFixed(1)}秒</span>
+		<span class="mx-2 text-gray-400">|</span>
+		{formatClock(clock.time)}/{formatClock(playerState.duration)}
 	</div>
 </div>
