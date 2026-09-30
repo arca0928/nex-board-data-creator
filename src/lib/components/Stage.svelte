@@ -16,24 +16,45 @@
 		'backSix'
 	] as const;
 
-	let activeColors = $derived.by(() => {
-		const time = clock.time;
-		const sorted = [...editorState.rows].sort((a, b) => (a.start || 0) - (b.start || 0));
-
-		// 現在より前の行のみ抽出
-		const pastRows = sorted.filter((row) => row.start <= time);
-
-		// 各列ごとに「最後に色が入力されていた値」を探す
-		const latestColors: Record<string, string> = {};
-
-		lightColumns.forEach((col) => {
-			// 下から遡って、空文字ではない最初の値を見つける
-			const lastValidRow = [...pastRows].reverse().find((row) => row[col] && row[col] !== '');
-			latestColors[col] = lastValidRow ? lastValidRow[col] : '#000000'; // 見つからなければ黒
-		});
-
-		return latestColors;
+	const lightTimelines = $derived.by(() => {
+		const sorted = [...editorState.rows].sort((a, b) => a.start - b.start);
+		return lightColumns.map((column) => ({
+			column,
+			events: sorted
+				.filter((row) => row[column] !== '')
+				.map((row) => ({ start: row.start, value: row[column] }))
+		}));
 	});
+
+	const activeColors = $derived.by(() => {
+		const time = clock.time;
+		const colors: Record<string, string> = {};
+		for (const { column, events } of lightTimelines) {
+			let low = 0;
+			let high = events.length;
+			while (low < high) {
+				const middle = Math.floor((low + high) / 2);
+				if (events[middle].start <= time) low = middle + 1;
+				else high = middle;
+			}
+			colors[column] = low > 0 ? events[low - 1].value : '#000000';
+		}
+		return colors;
+	});
+
+	const backLights = [
+		{ key: 'backOne', label: '1' },
+		{ key: 'backTwo', label: '2' },
+		{ key: 'backThree', label: '3' },
+		{ key: 'backFour', label: '4' },
+		{ key: 'backFive', label: '5' },
+		{ key: 'backSix', label: '6' }
+	] as const;
+
+	// サイド照明は白点灯/消灯のみ (未設定は消灯扱い)
+	function sideColor(value: string) {
+		return value === 'on' ? '#ffffff' : '#000000';
+	}
 
 	// ライトがオフ（黒）の場合は光らせない制御
 	function getGlow(color: string) {
@@ -42,82 +63,37 @@
 	}
 </script>
 
-<div class="h-50 rounded-2xl bg-[#0a0a0a] px-5 pt-5 pb-2.5">
-	<div class="flex flex-col items-center gap-1">
-		<div class="flex">
-			<div class="mx-0.5 flex flex-col">
-				<div
-					class="h-10 w-10 rounded-full transition-all duration-200"
-					style:background={activeColors?.backOne}
-					style:box-shadow={getGlow(activeColors?.backOne || '')}
-				></div>
-				<div class="mt-2 text-center text-sm text-white">バック1</div>
+<!-- 実際のステージ配置: 左サイド | バック1〜6 | 右サイド -->
+<div class="rounded-2xl bg-[#0a0a0a] px-3 py-4 text-white">
+	<div class="flex items-end justify-between">
+		{@render sideLight('左', activeColors.left)}
+		<div class="flex flex-col items-center gap-1">
+			<div class="flex gap-2">
+				{#each backLights as light (light.key)}
+					<div class="flex flex-col items-center gap-1">
+						<div
+							class="h-7 w-7 rounded-full ring-1 ring-white/25 transition-all duration-200"
+							style:background={activeColors[light.key]}
+							style:box-shadow={getGlow(activeColors[light.key])}
+						></div>
+						<div class="text-xs">{light.label}</div>
+					</div>
+				{/each}
 			</div>
-			<div class="mx-0.5 flex flex-col">
-				<div
-					class="h-10 w-10 rounded-full transition-all duration-200"
-					style:background={activeColors?.backTwo}
-					style:box-shadow={getGlow(activeColors?.backTwo || '')}
-				></div>
-				<div class="mt-2 text-center text-sm text-white">バック2</div>
-			</div>
-			<div class="mx-0.5 flex flex-col">
-				<div
-					class="h-10 w-10 rounded-full transition-all duration-200"
-					style:background={activeColors?.backThree}
-					style:box-shadow={getGlow(activeColors?.backThree || '')}
-				></div>
-				<div class="mt-2 text-center text-sm text-white">バック3</div>
-			</div>
-			<div class="mx-0.5 flex flex-col">
-				<div
-					class="h-10 w-10 rounded-full transition-all duration-200"
-					style:background={activeColors?.backFour}
-					style:box-shadow={getGlow(activeColors?.backFour || '')}
-				></div>
-				<div class="mt-2 text-center text-sm text-white">バック4</div>
-			</div>
-			<div class="mx-0.5 flex flex-col">
-				<div
-					class="h-10 w-10 rounded-full transition-all duration-200"
-					style:background={activeColors?.backFive}
-					style:box-shadow={getGlow(activeColors?.backFive || '')}
-				></div>
-				<div class="mt-2 text-center text-sm text-white">バック5</div>
-			</div>
-			<div class="mx-0.5 flex flex-col">
-				<div
-					class="h-10 w-10 rounded-full transition-all duration-200"
-					style:background={activeColors?.backSix}
-					style:box-shadow={getGlow(activeColors?.backSix || '')}
-				></div>
-				<div class="mt-2 text-center text-sm text-white">バック6</div>
-			</div>
+			<div class="text-xs text-gray-400">バック</div>
 		</div>
-
-		<div
-			class="flex w-full max-w-150 items-center justify-between border border-[#333] bg-[#111] px-1.5 pt-0 pb-2"
-		>
-			<div class="flex flex-col items-center">
-				<div class="mb-2 text-sm text-white">左サイド</div>
-				<div
-					class="h-10 w-10 rounded-lg transition-all duration-200"
-					style:background={`${activeColors.left === 'on' ? '#ffffff' : activeColors.left === 'off' ? '#000000' : ''}`}
-					style:box-shadow={getGlow(
-						activeColors.left === 'on' ? '#ffffff' : activeColors.left === 'off' ? '#000000' : ''
-					)}
-				></div>
-			</div>
-			<div class="flex flex-col items-center">
-				<div class="mb-2 text-sm text-white">右サイド</div>
-				<div
-					class="h-10 w-10 rounded-lg transition-all duration-200"
-					style:background={`${activeColors.right === 'on' ? '#ffffff' : activeColors.right === 'off' ? '#000000' : ''}`}
-					style:box-shadow={getGlow(
-						activeColors.right === 'on' ? '#ffffff' : activeColors.right === 'off' ? '#000000' : ''
-					)}
-				></div>
-			</div>
-		</div>
+		{@render sideLight('右', activeColors.right)}
 	</div>
 </div>
+
+{#snippet sideLight(label: string, value: string)}
+	<div class="flex flex-col items-center gap-1">
+		<div
+			class="h-7 w-5 rounded ring-1 ring-white/25 transition-all duration-200"
+			style:background={sideColor(value)}
+			style:box-shadow={getGlow(sideColor(value))}
+		></div>
+		<div class="text-xs">{label}</div>
+		<div class="text-xs text-gray-400">サイド</div>
+	</div>
+{/snippet}

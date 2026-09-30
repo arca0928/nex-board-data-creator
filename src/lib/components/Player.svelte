@@ -9,16 +9,20 @@
 	const playerState = editorState.playerState;
 </script>
 
-<div class="my-2 h-45 w-80 rounded border border-gray-300">
-	<div class="flex border-b bg-gray-100">
+<div class="w-80 overflow-hidden rounded-lg border border-gray-300 bg-white">
+	<div class="flex border-b border-gray-300 bg-gray-100" role="tablist" aria-label="再生ソース">
 		<button
-			class={`flex-1 cursor-pointer px-3 py-2 ${sourceMode === 'youtube' ? 'border-b-2 border-red-500 font-bold outline-0' : ''}`}
+			role="tab"
+			aria-selected={sourceMode === 'youtube'}
+			class={`flex-1 cursor-pointer px-3 py-2 focus-ring ${sourceMode === 'youtube' ? 'border-b-2 border-red-500 font-bold' : ''}`}
 			onclick={() => (sourceMode = 'youtube')}
 		>
 			YouTube
 		</button>
 		<button
-			class={`flex-1 cursor-pointer px-3 py-2 ${sourceMode === 'file' ? 'border-b-2 border-blue-500 font-bold outline-0' : ''}`}
+			role="tab"
+			aria-selected={sourceMode === 'file'}
+			class={`flex-1 cursor-pointer px-3 py-2 focus-ring ${sourceMode === 'file' ? 'border-b-2 border-accent font-bold' : ''}`}
 			onclick={() => (sourceMode = 'file')}
 		>
 			ファイル
@@ -26,12 +30,14 @@
 	</div>
 
 	<!-- コンテンツエリア -->
-	<div class="flex-1 overflow-hidden">
+	<div role="tabpanel">
 		{#if sourceMode === 'youtube'}
 			{#if playerState.mediaSource?.type === 'youtube' && playerState.mediaSource.youtubeId}
-				<YouTubePlayer videoId={playerState.mediaSource.youtubeId} />
+				<div class="aspect-video w-full bg-black">
+					<YouTubePlayer videoId={playerState.mediaSource.youtubeId} />
+				</div>
 			{:else}
-				<div class="flex h-full flex-col gap-2 p-3">
+				<div class="p-3">
 					<YouTubeInput />
 				</div>
 			{/if}
@@ -39,7 +45,7 @@
 			{#if playerState.mediaSource?.type === 'file'}
 				<LocalMediaPlayer source={playerState.mediaSource} />
 			{:else}
-				<div class="flex h-full flex-col gap-2 p-3">
+				<div class="p-3">
 					<MediaUploadInput />
 				</div>
 			{/if}
@@ -48,47 +54,34 @@
 		{/if}
 	</div>
 
-	<div
-		class={`mt-1 w-full border-t ${editorState.playerState.mediaSource === null ? 'hidden' : 'flex'}`}
-	>
-		<button
-			class="mx-auto my-1 cursor-pointer rounded-lg bg-blue-300 px-3 text-center"
-			onclick={() => editorState.playerState.setMediaSource(null)}
-		>
-			現在のソースを削除
-		</button>
-	</div>
-
 	<!-- 再生コントロール -->
 	{#if playerState.mediaSource}
-		<div class="flex gap-2 border-t bg-gray-50 p-2">
-			<button
-				onclick={() => playerState.play()}
-				disabled={playerState.isPlaying}
-				class="cursor-pointer rounded bg-green-500 px-2 py-1 text-white disabled:opacity-50"
-			>
-				▶
-			</button>
-			<button
-				onclick={() => playerState.pause()}
-				disabled={!playerState.isPlaying}
-				class="cursor-pointer rounded bg-orange-500 px-2 py-1 text-white disabled:opacity-50"
-			>
-				⏸
-			</button>
-			<input
-				type="range"
-				min="0"
-				max={playerState.duration}
-				value={playerState.currentTime}
-				onchange={(e) => {
-					const value = (e.target as HTMLInputElement).value;
-					playerState.seek(+value);
-				}}
-				class="flex-1"
-			/>
-			<div class="flex flex-col">
-				<label for="volume">音量</label>
+		<div class="flex flex-col gap-2 border-t border-gray-300 bg-gray-50 p-2">
+			<div class="flex items-center gap-2">
+				<button
+					onclick={() => (playerState.isPlaying ? playerState.pause() : playerState.play())}
+					aria-label={playerState.isPlaying ? '一時停止' : '再生'}
+					title={playerState.isPlaying ? '一時停止' : '再生'}
+					class="btn w-10 btn-secondary px-0"
+				>
+					{playerState.isPlaying ? '⏸' : '▶'}
+				</button>
+				<input
+					type="range"
+					min="0"
+					max={playerState.duration}
+					step="0.1"
+					value={playerState.currentTime}
+					aria-label="再生位置"
+					onchange={(e) => {
+						const value = (e.target as HTMLInputElement).value;
+						playerState.seek(+value);
+					}}
+					class="flex-1 cursor-pointer accent-accent"
+				/>
+			</div>
+			<div class="flex items-center gap-2">
+				<label for="volume" class="text-sm text-gray-600">音量</label>
 				<input
 					id="volume"
 					type="range"
@@ -106,8 +99,14 @@
 						}
 						playerState.volume = volume;
 					}}
-					class="w-20"
+					class="w-24 cursor-pointer accent-accent"
 				/>
+				<button
+					class="ml-auto btn btn-secondary px-2 py-0.5 text-sm"
+					onclick={() => editorState.playerState.setMediaSource(null)}
+				>
+					ソースを削除
+				</button>
 			</div>
 		</div>
 	{/if}

@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import type { Row } from '$lib/types/csv';
-import { editorState } from '$lib/states/editorState.svelte';
+import { CSV_COLUMNS, validateRows } from './csvValidation';
 
 type CSVErrorType =
 	| 'CSV_FORMAT_ERROR'
@@ -18,109 +18,67 @@ export class CSVError extends Error {
 
 export function parseEditCSV(file: File): Promise<Row[]> {
 	return new Promise((resolve, reject) => {
-		Papa.parse(file, {
+		Papa.parse<Record<string, string>>(file, {
 			header: true,
-			skipEmptyLines: true,
+			skipEmptyLines: 'greedy',
 			complete: (results) => {
-				let rowEditing = true;
-				let isEditing = false;
-
-				const eRows = editorState.rows[0];
-				if (
-					eRows.start === 0 ||
-					eRows.lyric === '' ||
-					eRows.duration === 0 ||
-					eRows.monitor === '' ||
-					eRows.type === '' ||
-					eRows.color === '#fde047' ||
-					eRows.content === '' ||
-					eRows.left === '' ||
-					eRows.backOne === '' ||
-					eRows.backTwo === '' ||
-					eRows.backThree === '' ||
-					eRows.backFour === '' ||
-					eRows.backFive === '' ||
-					eRows.backSix === '' ||
-					eRows.right === ''
-				) {
-					rowEditing = false;
-				}
-
-				if (editorState.rows.length > 1 || rowEditing) {
-					isEditing = true;
-				}
-
-				if (isEditing) {
-					if (
-						confirm(
-							'CSVファイルをインポートすると編集中のデータは上書きされ消去されます。続行しますか?'
-						) === false
-					) {
-						reject(new CSVError('CSV_IMPORT_CANCELED', 'インポートがキャンセルされました'));
-						return;
+				try {
+					const fields = results.meta.fields ?? [];
+					if (CSV_COLUMNS.some((field) => !fields.includes(field))) {
+						throw new CSVError('CSV_FORMAT_ERROR', 'CSVの必須列が不足しています');
 					}
-				}
-
-				const REQUIRED_FIELDS = [
-					'start',
-					'lyric',
-					'duration',
-					'monitor',
-					'type',
-					'color',
-					'content',
-					'left',
-					'backOne',
-					'backTwo',
-					'backThree',
-					'backFour',
-					'backFive',
-					'backSix',
-					'right'
-				] as const;
-
-				const fields = results.meta.fields ?? [];
-
-				const hasInvalidFields = REQUIRED_FIELDS.some((field) => !fields.includes(field));
-
-				if (hasInvalidFields) {
+					if (results.errors.length || Object.keys(results.meta.renamedHeaders ?? {}).length) {
+						throw new CSVError(
+							'CSV_DATA_ERROR',
+							results.errors[0]?.message ?? 'CSVの列名が重複しています'
+						);
+					}
+					const rows: Row[] = results.data.map((data, index) => {
+						const number = (column: 'start' | 'duration') => {
+							const value = data[column]?.trim();
+							if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value)) {
+								throw new Error(`${index + 1}行目の ${column} が数値ではありません`);
+							}
+							return Number(value);
+						};
+						const flag = data.nexState?.trim();
+						if (flag !== 'true' && flag !== 'false')
+							throw new Error(`${index + 1}行目の nexState が不正です`);
+						return {
+							id: crypto.randomUUID(),
+							nexState: flag === 'true',
+							start: number('start'),
+							duration: number('duration'),
+							lyric: data.lyric,
+							monitor: data.monitor,
+							type: data.type,
+							color: data.color,
+							content: data.content,
+							left: data.left,
+							backOne: data.backOne,
+							backTwo: data.backTwo,
+							backThree: data.backThree,
+							backFour: data.backFour,
+							backFive: data.backFive,
+							backSix: data.backSix,
+							right: data.right
+						};
+					});
+					validateRows(rows);
+					resolve(rows);
+				} catch (error) {
 					reject(
-						new CSVError(
-							'CSV_FORMAT_ERROR',
-							'アップロードされたCSVファイルのフォーマットが間違っています'
-						)
+						error instanceof CSVError
+							? error
+							: new CSVError(
+									'CSV_DATA_ERROR',
+									error instanceof Error ? error.message : 'CSVデータが不正です'
+								)
 					);
-					return;
 				}
-
-				const rows = results.data as Row[];
-				const validRows = rows.map((row) => ({
-					id: row.id || crypto.randomUUID(),
-					start: row.start || 0,
-					lyric: row.lyric || '',
-					duration: row.duration || 0,
-					monitor: row.monitor || '',
-					type: row.type || '',
-					color: row.color || '#fde047',
-					content: row.content || '',
-					left: row.left || '',
-					backOne: row.backOne || '',
-					backTwo: row.backTwo || '',
-					backThree: row.backThree || '',
-					backFour: row.backFour || '',
-					backFive: row.backFive || '',
-					backSix: row.backSix || '',
-					right: row.right || ''
-				}));
-
-				if (validRows.length === 0) {
-					editorState.addRow();
-				}
-
-				resolve(validRows);
 			},
 			error: (error) =>
-				reject(new CSVError('CSV_IMPORT_ERROR', error.message || 'CSVのインポートに失敗しました'))
+				reject(new CSVError('CSV_IMPORT_ERROR', error.message || 'CSVの読み込みに失敗しました'))
 		});
 	});
 }

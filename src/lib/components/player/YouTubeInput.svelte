@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { editorState } from '$lib/states/editorState.svelte';
+	import { toastState } from '$lib/states/toastState.svelte';
 
 	let youtubeUrl = $state('');
 
@@ -8,7 +9,7 @@
 		const videoId = extractYouTubeVideoId(youtubeUrl);
 
 		if (!videoId) {
-			alert('有効な YouTube URL を入力してください');
+			toastState.error('有効な YouTube URL を入力してください');
 			return;
 		}
 
@@ -43,17 +44,21 @@
 	}
 </script>
 
-<div class="flex flex-col gap-2">
+<form
+	class="flex flex-col gap-2"
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+>
 	<input
 		type="text"
 		placeholder="YouTube URL または Video ID を入力"
+		aria-label="YouTube URL または Video ID"
 		bind:value={youtubeUrl}
-		class="rounded border px-3 py-2"
+		class="rounded border border-gray-300 px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
 	/>
-	<button
-		onclick={handleSubmit}
-		class="cursor-pointer rounded bg-red-500 px-3 py-2 font-bold text-white"
-	>
+	<button type="submit" class="btn bg-red-600 py-2 font-bold text-white hover:bg-red-700">
 		YouTube を読み込む
 	</button>
-</div>
+</form>

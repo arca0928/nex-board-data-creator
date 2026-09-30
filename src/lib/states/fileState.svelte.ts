@@ -1,40 +1,69 @@
 import { editorState } from './editorState.svelte';
+import { toastState } from './toastState.svelte';
 import { hasInvalidFileNamePart, parseFileName } from '$lib/utils/fileNameparser';
-import { parseEditCSV } from '$lib/utils/csvImporter';
+import { CSVError, parseEditCSV } from '$lib/utils/csvImporter';
 import { downloadAllFiles } from '$lib/utils/csvExporter';
 
+function takeSnapshot() {
+	return JSON.stringify({
+		groupName: editorState.groupName,
+		songName: editorState.songName,
+		rows: editorState.rows
+	});
+}
+
 class FileState {
+	// 最後にインポート/ダウンロードした時点の内容 (未保存の変更検知用)
+	private savedSnapshot = takeSnapshot();
+
+	hasUnsavedChanges() {
+		return takeSnapshot() !== this.savedSnapshot;
+	}
+
 	async importCSV(file: File) {
 		const parsed = parseFileName(file.name);
-		console.log('File name parsed:', parsed);
 
 		const rows = await parseEditCSV(file);
+		if (
+			this.hasUnsavedChanges() &&
+			!confirm('CSVファイルをインポートすると未保存の編集内容が失われます。続行しますか?')
+		) {
+			throw new CSVError('CSV_IMPORT_CANCELED', 'インポートがキャンセルされました');
+		}
 		editorState.rows = rows;
+		editorState.focusedIndex = null;
 		if (parsed) {
 			editorState.groupName = parsed.groupName;
 			editorState.songName = parsed.songName;
-			console.log('Updated State:', editorState.groupName, editorState.songName);
 		}
+		this.savedSnapshot = takeSnapshot();
 	}
 
 	exportCSV() {
 		// 1. 空白チェック
 		if (!editorState.groupName.trim() || !editorState.songName.trim()) {
-			alert('グループ名と曲名を入力してください');
+			toastState.error('グループ名と曲名を入力してください');
 			return;
 		}
 
 		// 2. 不正文字チェック
 		if (
 			hasInvalidFileNamePart(editorState.groupName) ||
-			hasInvalidFileNamePart(editorState.songName)
+			hasInvalidFileNamePart(editorState.songName, true)
 		) {
-			alert('ファイル名に使用できない文字が含まれています。赤枠のエラーを修正してください。');
+			toastState.error(
+				'ファイル名に使用できない文字が含まれています。赤枠のエラーを修正してください。'
+			);
 			return;
 		}
 
 		// 3. ダウンロード実行
-		downloadAllFiles(editorState.rows, editorState.groupName, editorState.songName);
+		try {
+			downloadAllFiles(editorState.rows, editorState.groupName, editorState.songName);
+			this.savedSnapshot = takeSnapshot();
+		} catch (error) {
+			toastState.error(error instanceof Error ? error.message : 'CSVのダウンロードに失敗しました');
+		}
 	}
 }
 

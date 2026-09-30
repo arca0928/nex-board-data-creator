@@ -1,1 +1,33 @@
 @import 'tailwindcss';
+
+/* アプリ共通の色トークン */
+@theme {
+	--color-brand: #60a5fa;
+	--color-primary: #16a34a;
+	--color-primary-hover: #15803d;
+	--color-accent: #2563eb;
+	--color-danger: #dc2626;
+	--color-danger-hover: #b91c1c;
+}
+
+/* ボタン: 役割ごとに primary / secondary / danger の3種類に統一 */
+@utility btn {
+	@apply inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg px-3 py-1 whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-primary {
+	@apply bg-primary text-white hover:bg-primary-hover;
+}
+
+@utility btn-secondary {
+	@apply border border-gray-300 bg-white text-gray-800 hover:bg-gray-100;
+}
+
+@utility btn-danger {
+	@apply bg-danger text-white hover:bg-danger-hover;
+}
+
+/* テーブル内の入力欄などのフォーカス表示 */
+@utility focus-ring {
+	@apply outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset;
+}

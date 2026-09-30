@@ -1,4 +1,6 @@
 import type { Row } from '$lib/types/csv';
+import { CSV_COLUMNS } from '$lib/utils/csvValidation';
+import { toastState } from './toastState.svelte';
 import { MediaUploader } from '$lib/utils/mediaUploader';
 import type { YTPlayer } from '$lib/utils/youtubeLoader';
 
@@ -18,20 +20,32 @@ class PlayerState {
 	isPlaying = $state(false);
 	currentTime = $state(0); // 秒単位
 	duration = $state(0); // 秒単位
-	volume = $state(1);
+	volume = $state(100); // 0-100
 
 	// プレイヤーリファレンス（video/audio 要素またはYouTube Player）
 	playerRef = $state<HTMLVideoElement | HTMLAudioElement | YTPlayer | null>(null);
 
 	setMediaSource(source: MediaSource | null) {
-		if (this.mediaSource?.type === 'file') {
-			if (editorState.playerState.mediaSource?.fileUrl) {
-				MediaUploader.revokeBlobUrl(editorState.playerState.mediaSource?.fileUrl);
-			}
+		this.pause();
+		this.playerRef = null;
+		if (this.mediaSource?.type === 'file' && this.mediaSource.fileUrl) {
+			MediaUploader.revokeBlobUrl(this.mediaSource.fileUrl);
 		}
 		this.mediaSource = source;
 		this.currentTime = 0;
 		this.duration = 0;
+	}
+
+	// プレイヤーから直接取得した正確な再生位置 (秒, 小数あり)
+	getExactTime(): number {
+		const ref = this.playerRef;
+		if (ref) {
+			if ('currentTime' in ref) return ref.currentTime;
+			if ('getCurrentTime' in ref && typeof ref.getCurrentTime === 'function') {
+				return ref.getCurrentTime();
+			}
+		}
+		return this.currentTime;
 	}
 
 	updateCurrentTime(time: number) {
@@ -43,6 +57,8 @@ class PlayerState {
 	}
 
 	play() {
+		const ref = this.playerRef;
+		if (!ref) return;
 		this.isPlaying = true;
 		if (this.playerRef) {
 			if ('playVideo' in this.playerRef && typeof this.playerRef.playVideo === 'function') {
@@ -50,7 +66,11 @@ class PlayerState {
 				this.playerRef.playVideo();
 			} else if ('play' in this.playerRef && typeof this.playerRef.play === 'function') {
 				// HTML5 video/audio
-				this.playerRef.play();
+				void this.playerRef.play().catch(() => {
+					if (this.playerRef !== ref) return;
+					this.isPlaying = false;
+					toastState.error('メディアを再生できませんでした');
+				});
 			}
 		}
 	}
@@ -85,23 +105,7 @@ class EditorState {
 	groupName = $state('');
 	songName = $state('');
 	rows = $state<Row[]>([]);
-	columns = [
-		'start',
-		'lyric',
-		'duration',
-		'monitor',
-		'type',
-		'color',
-		'content',
-		'left',
-		'backOne',
-		'backTwo',
-		'backThree',
-		'backFour',
-		'backFive',
-		'backSix',
-		'right'
-	] as const;
+	columns = CSV_COLUMNS;
 
 	focusedIndex = $state<number | null>(null);
 
@@ -114,6 +118,7 @@ class EditorState {
 	private createEmptyRow(): Row {
 		return {
 			id: crypto.randomUUID(),
+			nexState: true,
 			start: 0,
 			lyric: '',
 			duration: 0,
