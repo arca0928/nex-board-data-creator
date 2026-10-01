@@ -1,19 +1,36 @@
+let apiPromise: Promise<void> | null = null;
+
 export function loadYouTubeAPI(): Promise<void> {
-	return new Promise((resolve) => {
-		if (window.YT && window.YT.Player) {
-			resolve();
-			return;
-		}
-
-		window.onYouTubeIframeAPIReady = (): void => {
-			resolve();
-		};
-
+	if (window.YT?.Player) return Promise.resolve();
+	if (apiPromise) return apiPromise;
+	apiPromise = new Promise<void>((resolve, reject) => {
+		const previousReady = window.onYouTubeIframeAPIReady;
 		const script = document.createElement('script');
+		const cleanup = () => {
+			clearTimeout(timeout);
+			script.onerror = null;
+			window.onYouTubeIframeAPIReady = previousReady;
+		};
+		const fail = () => {
+			cleanup();
+			script.remove();
+			reject(new Error('YouTube APIを読み込めませんでした'));
+		};
+		const timeout = setTimeout(fail, 15000);
+		window.onYouTubeIframeAPIReady = () => {
+			cleanup();
+			resolve();
+			previousReady?.();
+		};
 		script.src = 'https://www.youtube.com/iframe_api';
 		script.async = true;
+		script.onerror = fail;
 		document.body.appendChild(script);
+	}).catch((error: unknown) => {
+		apiPromise = null;
+		throw error;
 	});
+	return apiPromise;
 }
 
 declare global {
@@ -37,6 +54,7 @@ export interface YTPlayerOptions {
 	events?: {
 		onReady?: (event: YTOnReadyEvent) => void;
 		onStateChange?: (event: YTOnStateChangeEvent) => void;
+		onError?: (event: { data: number; target: YTPlayer }) => void;
 	};
 }
 

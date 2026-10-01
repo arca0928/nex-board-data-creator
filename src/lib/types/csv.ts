@@ -1,5 +1,6 @@
 export interface Row {
 	id: string;
+	nexState: boolean;
 	start: number;
 	lyric: string;
 	duration: number;

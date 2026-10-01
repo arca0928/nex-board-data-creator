@@ -10,7 +10,7 @@ export function usePreviewClock() {
 		const playerRef = editorState.playerState.playerRef;
 
 		if (!isPlaying || !playerRef) {
-			animatedTime = pTime;
+			animatedTime = playerRef ? editorState.playerState.getExactTime() : pTime;
 			return;
 		}
 
