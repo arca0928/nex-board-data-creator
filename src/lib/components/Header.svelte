@@ -110,10 +110,20 @@
 	}}
 >
 	<h2 class="mb-1 text-3xl">使い方</h2>
-	<h3 class="mb-1 text-xl font-bold text-red-600">このアプリは全画面で使用してください</h3>
-	<div class="flex">
+	<div class="flex flex-col gap-4">
+		<figure>
+			<img
+				src="/how2.png"
+				alt="現在の編集画面に、CSVの読み込み・保存、プレビュー、再生ソース、編集列と行操作を示す1〜12の番号を付けた使い方画像。下部は表を右にスクロールした照明列の詳細です。"
+				class="h-auto w-full rounded-lg border border-gray-300"
+				decoding="async"
+			/>
+			<figcaption class="mt-2 text-sm text-gray-600">
+				画像の番号は以下の説明と対応しています。編集表は左右にスクロールできます。
+			</figcaption>
+		</figure>
 		<div>
-			<ul class="list-decimal px-5 py-2">
+			<ol class="list-decimal px-5 py-2">
 				<li class="py-1">編集途中のcsvファイルを読み込むボタン</li>
 				<li class="py-1">csvファイルをダウンロードするボタン</li>
 				<li class="py-1">左:使い方を表示するボタン 右:注意事項を表示するボタン</li>
@@ -128,7 +138,7 @@
 				<li class="py-1">ステージ照明の色を簡単に確認するエリア</li>
 				<li class="py-1">タイミングを調整するための元動画/音源を再生するエリア</li>
 				<li class="py-1">
-					電光掲示板に関する内容を入力する列
+					電光掲示板に関する内容を入力する列。「電光掲示板の表示」をOFFにすると、その行は掲示板プレビューの対象外になります。照明の設定は引き続き有効です。
 					<table>
 						<tbody>
 							<tr>
@@ -165,11 +175,17 @@
 						</tbody>
 					</table>
 				</li>
-				<li class="py-1">ステージ照明(バック)に指定する色を入力する列</li>
-				<li class="py-1">ステージ照明(サイド)の白点灯/消灯を選択する列</li>
-			</ul>
+				<li class="py-1">
+					ステージ照明(バック)に指定する色を入力する列。表を右にスクロールすると表示されます。
+				</li>
+				<li class="py-1">
+					ステージ照明(サイド)の白点灯/消灯を選択する列。表を右にスクロールすると表示されます。
+				</li>
+				<li class="py-1">
+					行の追加・開始時間への現在の再生時間の入力・行の削除を行うボタン。編集表のセルをクリックして行を選択してから操作します。
+				</li>
+			</ol>
 		</div>
-		<img src="/how2.png" alt="使い方解説用画像" class="size-50/100" />
 	</div>
 	<h3 class="mt-2 mb-1 text-xl">ステージ照明について :</h3>
 	<ul class="list-disc px-5">
