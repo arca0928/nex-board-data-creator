@@ -110,7 +110,6 @@
 	}}
 >
 	<h2 class="mb-1 text-3xl">使い方</h2>
-	<h3 class="mb-1 text-xl font-bold text-red-600">このアプリは全画面で使用してください</h3>
 	<div class="flex">
 		<div>
 			<ul class="list-decimal px-5 py-2">
