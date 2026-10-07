@@ -16,7 +16,8 @@ export const CSV_COLUMNS = [
 	'backFour',
 	'backFive',
 	'backSix',
-	'right'
+	'right',
+	'remarks'
 ] as const satisfies readonly (keyof Row)[];
 
 export function validateRows(rows: Row[]) {

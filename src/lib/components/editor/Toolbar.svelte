@@ -17,7 +17,10 @@
 	function handleDelete() {
 		if (!focusedRow) return;
 		// 内容が入力済みの行は誤削除防止のため確認する
-		if ((focusedRow.content || focusedRow.lyric) && !confirm(`${focusedLabel}を削除しますか?`)) {
+		if (
+			(focusedRow.content || focusedRow.lyric || focusedRow.remarks) &&
+			!confirm(`${focusedLabel}を削除しますか?`)
+		) {
 			return;
 		}
 		editorState.deleteRow();

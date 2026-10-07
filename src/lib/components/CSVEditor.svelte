@@ -48,7 +48,8 @@
 		backFour: 'バック4',
 		backFive: 'バック5',
 		backSix: 'バック6',
-		right: '右サイド'
+		right: '右サイド',
+		remarks: '備考'
 	};
 
 	// 横スクロールしても行番号・表示・開始時間の列は左に固定する
@@ -87,7 +88,7 @@
 					>#</th
 				>
 				<th colspan="8" class="border-b border-gray-300 py-1">電光掲示板</th>
-				<th colspan="8" class="border-b border-l border-gray-300 py-1">ステージ照明</th>
+				<th colspan="9" class="border-b border-l border-gray-300 py-1">ステージ照明</th>
 			</tr>
 			<tr>
 				{#each editorState.columns as column, i (column)}
@@ -114,7 +115,17 @@
 					</td>
 					{#each editorState.columns as column, i (column)}
 						{@const border = `border-b border-gray-300 ${i > 0 ? 'border-l' : ''} ${stickyClass[column] ? `${stickyClass[column]} bg-inherit` : ''}`}
-						{#if column == 'lyric' || column == 'content'}
+						{#if column == 'remarks'}
+							<td class={`w-100 p-1 ${border}`}>
+								<textarea
+									bind:value={row.remarks}
+									rows={1}
+									placeholder="照明設定の備考"
+									aria-label={cellLabel(rowIndex, column)}
+									class="block w-full min-w-80 resize-y rounded bg-transparent px-1 focus-ring"
+								></textarea>
+							</td>
+						{:else if column == 'lyric' || column == 'content'}
 							<td class={`w-100 p-1 ${border}`}>
 								<input
 									bind:value={row[column]}

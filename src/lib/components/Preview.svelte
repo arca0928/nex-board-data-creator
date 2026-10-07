@@ -166,7 +166,7 @@
 
 	<div class="monitors-container" style:gap="{PREVIEW_GAP}px">
 		<div
-			class="ticker-viewport"
+			class="ticker-viewport bg-slate-900"
 			style:width="{SUB_VIRTUAL_WIDTH * globalScale}px"
 			style:height="{VIRTUAL_HEIGHT * globalScale}px"
 		>
@@ -189,7 +189,7 @@
 		</div>
 
 		<div
-			class="ticker-viewport"
+			class="ticker-viewport bg-slate-900"
 			style:width="{MAIN_VIRTUAL_WIDTH * globalScale}px"
 			style:height="{VIRTUAL_HEIGHT * globalScale}px"
 		>
@@ -246,7 +246,6 @@
 	}
 
 	.ticker-viewport {
-		background-color: #000000;
 		border: 2px solid #333333;
 		border-radius: 4px;
 		position: relative;
