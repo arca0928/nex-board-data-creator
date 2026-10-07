@@ -16,4 +16,5 @@ export interface Row {
 	backFive: string;
 	backSix: string;
 	right: string;
+	remarks: string;
 }

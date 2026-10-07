@@ -3,10 +3,7 @@ import type { Row } from '$lib/types/csv';
 import { CSV_COLUMNS, validateRows } from './csvValidation';
 
 type CSVErrorType =
-	| 'CSV_FORMAT_ERROR'
-	| 'CSV_IMPORT_ERROR'
-	| 'CSV_DATA_ERROR'
-	| 'CSV_IMPORT_CANCELED';
+	'CSV_FORMAT_ERROR' | 'CSV_IMPORT_ERROR' | 'CSV_DATA_ERROR' | 'CSV_IMPORT_CANCELED';
 export class CSVError extends Error {
 	constructor(
 		public type: CSVErrorType,
@@ -24,7 +21,8 @@ export function parseEditCSV(file: File): Promise<Row[]> {
 			complete: (results) => {
 				try {
 					const fields = results.meta.fields ?? [];
-					if (CSV_COLUMNS.some((field) => !fields.includes(field))) {
+					// 備考列がない旧バージョンのCSVも受け入れる。
+					if (CSV_COLUMNS.some((field) => field !== 'remarks' && !fields.includes(field))) {
 						throw new CSVError('CSV_FORMAT_ERROR', 'CSVの必須列が不足しています');
 					}
 					if (results.errors.length || Object.keys(results.meta.renamedHeaders ?? {}).length) {
@@ -61,7 +59,8 @@ export function parseEditCSV(file: File): Promise<Row[]> {
 							backFour: data.backFour,
 							backFive: data.backFive,
 							backSix: data.backSix,
-							right: data.right
+							right: data.right,
+							remarks: data.remarks ?? ''
 						};
 					});
 					validateRows(rows);

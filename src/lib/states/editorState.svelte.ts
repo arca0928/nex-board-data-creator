@@ -133,7 +133,8 @@ class EditorState {
 			backFour: '',
 			backFive: '',
 			backSix: '',
-			right: ''
+			right: '',
+			remarks: ''
 		};
 	}
 
