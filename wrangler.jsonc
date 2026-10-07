@@ -1,4 +1,6 @@
 {
+	// @sveltejs/adapter-cloudflare uses this file for builds and its platform proxy.
+	// cf-wrangler and cf deploy use cloudflare.config.ts and wrangler.config.ts.
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "nexboard-creator",
 	"compatibility_date": "2026-08-20",

@@ -11,9 +11,6 @@ importers:
       papaparse:
         specifier: ^5.5.3
         version: 5.7.0
-      wrangler:
-        specifier: ^4.125.0
-        version: 4.143.0(@types/node@24.19.0)
     devDependencies:
       '@eslint/compat':
         specifier: ^2.1.0
@@ -102,6 +99,9 @@ importers:
       vitest-browser-svelte:
         specifier: ^2.1.1
         version: 2.2.1(svelte@5.57.1(@typescript-eslint/types@8.71.0))(vitest@4.1.11)
+      wrangler:
+        specifier: ^4.143.0
+        version: 4.143.0(@types/node@24.19.0)
 
 packages:
 

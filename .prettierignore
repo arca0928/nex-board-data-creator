@@ -8,5 +8,5 @@ bun.lockb
 # Miscellaneous
 /static/
 
-# Wrangler-generated types are checked by wrangler types --check.
-worker-configuration.d.ts
+# Cloudflare CLI generates types and build output here.
+.cloudflare
